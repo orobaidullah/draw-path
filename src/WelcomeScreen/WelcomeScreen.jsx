@@ -1,26 +1,26 @@
 import React, { useState, useRef } from "react";
 import "./WelcomeScreen.css";
 
-const WIDTH = 600;
-const HEIGHT = 400;
+const BOARD_WIDTH = 600;
+const BOARD_HEIGHT = 400;
 
-const obstacles = [
+const OBSTACLES = [
   { x: 150, y: 80, width: 80, height: 180 },
   { x: 300, y: 0, width: 60, height: 160 },
   { x: 380, y: 200, width: 120, height: 60 },
   { x: 480, y: 40, width: 70, height: 140 },
 ];
 
-const start = { x: 70, y: HEIGHT / 2, r: 30 };
-const end = { x: WIDTH - 70, y: HEIGHT / 2, r: 30 };
+const START_NODE = { x: 70, y: BOARD_HEIGHT / 2, r: 30 };
+const END_NODE = { x: BOARD_WIDTH - 70, y: BOARD_HEIGHT / 2, r: 30 };
 
-function distance(a, b) {
+function getDistance(a, b) {
   const dx = a.x - b.x;
   const dy = a.y - b.y;
   return Math.sqrt(dx * dx + dy * dy);
 }
 
-function pointInRect(point, rect) {
+function isPointInsideRect(point, rect) {
   return (
     point.x >= rect.x &&
     point.x <= rect.x + rect.width &&
@@ -30,16 +30,18 @@ function pointInRect(point, rect) {
 }
 
 const WelcomeScreen = () => {
-  const [path, setPath] = useState([]);
+  const [pathPoints, setPathPoints] = useState([]);
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasLost, setHasLost] = useState(false);
   const [hasWon, setHasWon] = useState(false);
-  const [status, setStatus] = useState("Start on A and draw to B.");
+  const [statusMessage, setStatusMessage] = useState(
+    "Start on A and draw to B."
+  );
 
   const svgRef = useRef(null);
   const startedFromStartRef = useRef(false);
 
-  const getRelativePoint = (event) => {
+  const getPointFromEvent = (event) => {
     const svg = svgRef.current;
     if (!svg) return null;
 
@@ -59,12 +61,13 @@ const WelcomeScreen = () => {
     event.preventDefault();
     if (hasWon) return;
 
-    const point = getRelativePoint(event);
+    const point = getPointFromEvent(event);
     if (!point) return;
 
-    const onStart = distance(point, start) <= start.r;
-    if (!onStart) {
-      setStatus("You must start inside A.");
+    const startedOnStart = getDistance(point, START_NODE) <= START_NODE.r;
+
+    if (!startedOnStart) {
+      setStatusMessage("You must start inside A.");
       return;
     }
 
@@ -72,46 +75,60 @@ const WelcomeScreen = () => {
     setIsDrawing(true);
     setHasLost(false);
     setHasWon(false);
-    setPath([point]);
-    setStatus("Good, now stay away from the red blocks…");
+    setPathPoints([point]);
+    setStatusMessage("Good, now stay away from the red blocks…");
   };
 
   const handleMove = (event) => {
     if (!isDrawing || hasLost || hasWon) return;
 
-    const point = getRelativePoint(event);
+    const point = getPointFromEvent(event);
     if (!point) return;
 
-    // Outside the play area
-    if (point.x < 0 || point.x > WIDTH || point.y < 0 || point.y > HEIGHT) {
+    const isOutsideBoard =
+      point.x < 0 ||
+      point.x > BOARD_WIDTH ||
+      point.y < 0 ||
+      point.y > BOARD_HEIGHT;
+
+    if (isOutsideBoard) {
       setIsDrawing(false);
       setHasLost(true);
-      setStatus("You left the play area!");
+      setStatusMessage("You left the play area!");
       return;
     }
 
     // Keep path reasonably small
-    setPath((prev) => {
-      if (prev.length === 0) return [point];
-      const last = prev[prev.length - 1];
-      if (distance(last, point) < 3) return prev;
-      return [...prev, point];
+    setPathPoints((prevPoints) => {
+      if (prevPoints.length === 0) return [point];
+
+      const lastPoint = prevPoints[prevPoints.length - 1];
+      const movedEnough = getDistance(lastPoint, point) >= 3;
+
+      if (!movedEnough) return prevPoints;
+
+      return [...prevPoints, point];
     });
 
     // Hit obstacle
-    const hitObstacle = obstacles.some((o) => pointInRect(point, o));
+    const hitObstacle = OBSTACLES.some((obstacle) =>
+      isPointInsideRect(point, obstacle)
+    );
+
     if (hitObstacle) {
       setIsDrawing(false);
       setHasLost(true);
-      setStatus("You hit an obstacle!");
+      setStatusMessage("You hit an obstacle!");
       return;
     }
 
     // Reached end
-    if (distance(point, end) <= end.r) {
+    const reachedEnd = getDistance(point, END_NODE) <= END_NODE.r;
+
+    if (reachedEnd) {
       setIsDrawing(false);
       setHasWon(true);
-      setStatus("You reached B Station");
+      setStatusMessage("You reached B Station");
     }
   };
 
@@ -122,20 +139,20 @@ const WelcomeScreen = () => {
 
     if (!hasWon && startedFromStartRef.current) {
       setHasLost(true);
-      setStatus("You let go before reaching B.");
+      setStatusMessage("You let go before reaching B.");
     }
   };
 
   const handleReset = () => {
-    setPath([]);
+    setPathPoints([]);
     setIsDrawing(false);
     setHasLost(false);
     setHasWon(false);
     startedFromStartRef.current = false;
-    setStatus("Start on A and draw to B.");
+    setStatusMessage("Start on A and draw to B.");
   };
 
-  const pathStateClass = hasWon
+  const pathClassName = hasWon
     ? "path--won"
     : hasLost
     ? "path--lost"
@@ -146,13 +163,13 @@ const WelcomeScreen = () => {
       <div className="welcome-screen__card">
         <h1 className="welcome-screen__title">A → B Path Game</h1>
 
-        <div className="welcome-screen__status">{status}</div>
+        <div className="welcome-screen__status">{statusMessage}</div>
 
         <div className="welcome-screen__board">
           <svg
             ref={svgRef}
-            width={WIDTH}
-            height={HEIGHT}
+            width={BOARD_WIDTH}
+            height={BOARD_HEIGHT}
             className="welcome-screen__svg"
             onMouseDown={handleStart}
             onMouseMove={handleMove}
@@ -180,17 +197,18 @@ const WelcomeScreen = () => {
                 />
               </pattern>
             </defs>
-            <rect width={WIDTH} height={HEIGHT} fill="url(#grid)" />
+
+            <rect width={BOARD_WIDTH} height={BOARD_HEIGHT} fill="url(#grid)" />
 
             {/* Obstacles */}
-            {obstacles.map((o, index) => (
+            {OBSTACLES.map((obstacle, index) => (
               <rect
                 key={index}
                 className="obstacle"
-                x={o.x}
-                y={o.y}
-                width={o.width}
-                height={o.height}
+                x={obstacle.x}
+                y={obstacle.y}
+                width={obstacle.width}
+                height={obstacle.height}
                 rx={8}
                 ry={8}
               />
@@ -199,13 +217,13 @@ const WelcomeScreen = () => {
             {/* Start (A) */}
             <circle
               className="node node--start"
-              cx={start.x}
-              cy={start.y}
-              r={start.r}
+              cx={START_NODE.x}
+              cy={START_NODE.y}
+              r={START_NODE.r}
             />
             <text
-              x={start.x}
-              y={start.y + 5}
+              x={START_NODE.x}
+              y={START_NODE.y + 5}
               textAnchor="middle"
               fontSize="20"
               fill="#ecfdf5"
@@ -216,13 +234,13 @@ const WelcomeScreen = () => {
             {/* End (B) */}
             <circle
               className="node node--end"
-              cx={end.x}
-              cy={end.y}
-              r={end.r}
+              cx={END_NODE.x}
+              cy={END_NODE.y}
+              r={END_NODE.r}
             />
             <text
-              x={end.x}
-              y={end.y + 5}
+              x={END_NODE.x}
+              y={END_NODE.y + 5}
               textAnchor="middle"
               fontSize="20"
               fill="#eff6ff"
@@ -231,10 +249,10 @@ const WelcomeScreen = () => {
             </text>
 
             {/* Path */}
-            {path.length > 1 && (
+            {pathPoints.length > 1 && (
               <polyline
-                className={`path ${pathStateClass}`}
-                points={path.map((p) => `${p.x},${p.y}`).join(" ")}
+                className={`path ${pathClassName}`}
+                points={pathPoints.map((p) => `${p.x},${p.y}`).join(" ")}
               />
             )}
           </svg>

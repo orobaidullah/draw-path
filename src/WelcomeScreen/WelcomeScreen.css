@@ -1,23 +1,30 @@
+/* Layout */
+
 .welcome-screen {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 16px;
+
   background: #0f172a;
   color: #e5e7eb;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  padding: 16px;
 }
 
 .welcome-screen__card {
-  background: #020617;
+  width: 100%;
+  max-width: 760px;
+
   padding: 20px;
   border-radius: 16px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
   border: 1px solid rgba(148, 163, 184, 0.4);
-  max-width: 760px;
-  width: 100%;
+
+  background: #020617;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
 }
+
+/* Headings / text */
 
 .welcome-screen__title {
   font-size: 24px;
@@ -33,22 +40,24 @@
 .welcome-screen__status {
   margin-bottom: 12px;
   padding: 8px 12px;
-  /* border-radius: 999px; */
   font-size: 14px;
-  /* background: rgba(15, 23, 42, 0.9); */
+
   border: 1px solid rgba(148, 163, 184, 0.5);
 }
+
+/* Game board */
 
 .welcome-screen__board {
   border-radius: 12px;
   overflow: hidden;
+
   border: 1px solid rgba(148, 163, 184, 0.5);
   background: #020617;
 }
 
 .welcome-screen__svg {
-  touch-action: none;
   display: block;
+  touch-action: none;
 }
 
 /* Obstacles */
@@ -101,22 +110,26 @@
 
 .welcome-screen__footer {
   display: flex;
-  margin-top: 12px;
   justify-content: space-between;
-  align-items: end;
+  align-items: flex-end;
   gap: 8px;
+  margin-top: 12px;
 }
 
 .welcome-screen__reset {
   padding: 8px 16px;
-  border-radius: 999px;
   border: none;
+  border-radius: 999px;
+
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
+
+  color: #ffffff;
   background: linear-gradient(to right, rgb(59, 130, 246), rgb(129, 140, 248));
-  color: white;
   box-shadow: 0 10px 20px rgba(37, 99, 235, 0.4);
+
+  transition: transform 0.05s ease, box-shadow 0.05s ease;
 }
 
 .welcome-screen__reset:active {
