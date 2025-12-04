@@ -1,4 +1,5 @@
 import React, { useState, useRef } from "react";
+import "./WelcomeScreen.css";
 
 const WIDTH = 600;
 const HEIGHT = 400;
@@ -34,6 +35,7 @@ const WelcomeScreen = () => {
   const [hasLost, setHasLost] = useState(false);
   const [hasWon, setHasWon] = useState(false);
   const [status, setStatus] = useState("Start on A and draw to B.");
+
   const svgRef = useRef(null);
   const startedFromStartRef = useRef(false);
 
@@ -49,12 +51,13 @@ const WelcomeScreen = () => {
 
     const x = clientX - rect.left;
     const y = clientY - rect.top;
+
     return { x, y };
   };
 
   const handleStart = (event) => {
     event.preventDefault();
-    if (hasWon) return; // ignore once finished
+    if (hasWon) return;
 
     const point = getRelativePoint(event);
     if (!point) return;
@@ -79,7 +82,7 @@ const WelcomeScreen = () => {
     const point = getRelativePoint(event);
     if (!point) return;
 
-    // Bounds check
+    // Outside the play area
     if (point.x < 0 || point.x > WIDTH || point.y < 0 || point.y > HEIGHT) {
       setIsDrawing(false);
       setHasLost(true);
@@ -87,7 +90,7 @@ const WelcomeScreen = () => {
       return;
     }
 
-    // Add to path (only if moved a bit to keep polyline reasonable)
+    // Keep path reasonably small
     setPath((prev) => {
       if (prev.length === 0) return [point];
       const last = prev[prev.length - 1];
@@ -95,7 +98,7 @@ const WelcomeScreen = () => {
       return [...prev, point];
     });
 
-    // Collision with obstacles
+    // Hit obstacle
     const hitObstacle = obstacles.some((o) => pointInRect(point, o));
     if (hitObstacle) {
       setIsDrawing(false);
@@ -104,17 +107,17 @@ const WelcomeScreen = () => {
       return;
     }
 
-    // Reached B?
+    // Reached end
     if (distance(point, end) <= end.r) {
       setIsDrawing(false);
       setHasWon(true);
-      setStatus("Nice! You reached B safely 🎉");
-      return;
+      setStatus("You reached B Station");
     }
   };
 
   const handleEnd = () => {
     if (!isDrawing) return;
+
     setIsDrawing(false);
 
     if (!hasWon && startedFromStartRef.current) {
@@ -132,64 +135,25 @@ const WelcomeScreen = () => {
     setStatus("Start on A and draw to B.");
   };
 
-  const strokeColor = hasWon ? "#22c55e" : hasLost ? "#ef4444" : "#facc15";
+  const pathStateClass = hasWon
+    ? "path--won"
+    : hasLost
+    ? "path--lost"
+    : "path--active";
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "#0f172a",
-        color: "#e5e7eb",
-        fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
-        padding: 16,
-      }}
-    >
-      <div
-        style={{
-          background: "#020617",
-          padding: 20,
-          borderRadius: 16,
-          boxShadow: "0 20px 40px rgba(0,0,0,0.5)",
-          border: "1px solid rgba(148, 163, 184, 0.4)",
-          maxWidth: 760,
-          width: "100%",
-        }}
-      >
-        <h1 style={{ fontSize: 24, marginBottom: 4 }}>A → B Path Game</h1>
-        <p style={{ marginBottom: 12, fontSize: 14, color: "#94a3b8" }}>
-          Hold the mouse down inside A, draw a path to B, and don&apos;t touch
-          the red blocks.
-        </p>
+    <div className="welcome-screen">
+      <div className="welcome-screen__card">
+        <h1 className="welcome-screen__title">A → B Path Game</h1>
 
-        <div
-          style={{
-            marginBottom: 12,
-            padding: "8px 12px",
-            borderRadius: 999,
-            fontSize: 14,
-            background: "rgba(15,23,42,0.9)",
-            border: "1px solid rgba(148,163,184,0.5)",
-          }}
-        >
-          {status}
-        </div>
+        <div className="welcome-screen__status">{status}</div>
 
-        <div
-          style={{
-            borderRadius: 12,
-            overflow: "hidden",
-            border: "1px solid rgba(148,163,184,0.5)",
-            background: "#020617",
-          }}
-        >
+        <div className="welcome-screen__board">
           <svg
             ref={svgRef}
             width={WIDTH}
             height={HEIGHT}
-            style={{ touchAction: "none", display: "block" }}
+            className="welcome-screen__svg"
             onMouseDown={handleStart}
             onMouseMove={handleMove}
             onMouseUp={handleEnd}
@@ -219,30 +183,25 @@ const WelcomeScreen = () => {
             <rect width={WIDTH} height={HEIGHT} fill="url(#grid)" />
 
             {/* Obstacles */}
-            {obstacles.map((o, i) => (
+            {obstacles.map((o, index) => (
               <rect
-                key={i}
+                key={index}
+                className="obstacle"
                 x={o.x}
                 y={o.y}
                 width={o.width}
                 height={o.height}
                 rx={8}
                 ry={8}
-                fill="#b91c1c"
-                fillOpacity="0.9"
-                stroke="#fecaca"
-                strokeWidth="2"
               />
             ))}
 
             {/* Start (A) */}
             <circle
+              className="node node--start"
               cx={start.x}
               cy={start.y}
               r={start.r}
-              fill="#16a34a"
-              stroke="#bbf7d0"
-              strokeWidth="3"
             />
             <text
               x={start.x}
@@ -256,12 +215,10 @@ const WelcomeScreen = () => {
 
             {/* End (B) */}
             <circle
+              className="node node--end"
               cx={end.x}
               cy={end.y}
               r={end.r}
-              fill="#2563eb"
-              stroke="#bfdbfe"
-              strokeWidth="3"
             />
             <text
               x={end.x}
@@ -276,46 +233,21 @@ const WelcomeScreen = () => {
             {/* Path */}
             {path.length > 1 && (
               <polyline
+                className={`path ${pathStateClass}`}
                 points={path.map((p) => `${p.x},${p.y}`).join(" ")}
-                fill="none"
-                stroke={strokeColor}
-                strokeWidth="4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
               />
             )}
           </svg>
         </div>
 
-        <div
-          style={{
-            display: "flex",
-            marginTop: 12,
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: 8,
-          }}
-        >
+        <div className="welcome-screen__footer">
           <button
+            type="button"
             onClick={handleReset}
-            style={{
-              padding: "8px 16px",
-              borderRadius: 999,
-              border: "none",
-              fontSize: 14,
-              fontWeight: 500,
-              cursor: "pointer",
-              background:
-                "linear-gradient(to right, rgb(59,130,246), rgb(129,140,248))",
-              color: "white",
-              boxShadow: "0 10px 20px rgba(37,99,235,0.4)",
-            }}
+            className="welcome-screen__reset"
           >
             Reset
           </button>
-          <span style={{ fontSize: 12, color: "#64748b" }}>
-            Tip: try moving slowly near the obstacles.
-          </span>
         </div>
       </div>
     </div>
